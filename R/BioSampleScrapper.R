@@ -2,17 +2,13 @@ library(tidyverse)
 library(rentrez)
 library(xml2)
 
-#TODO: cambiar el lugar donde está el api
-entrez_key=Sys.getenv("ENTREZ_KEY")
-set_entrez_key(entrez_key)
-
-
 .fetch_bioproject_uid_from_accession <- function(ids) 
 {
   results <- list()
   for (id in ids) 
   {
     res <- entrez_search(db = "bioproject", term = paste0(id, "[Accession]"))
+    Sys.sleep(0.1)
     if (length(res$ids) == 0) 
     {
       warning("BioProject not found: ", id)
@@ -21,11 +17,12 @@ set_entrez_key(entrez_key)
     {
       results[[id]] <- res$ids
     }
-    Sys.sleep(0.1)
+    
   }
   return(results)
 }
-.extract_fields= function (sample)
+
+.extract_fields_biosample= function (sample)
 {
   ids=sample$Ids
   desc=sample$Description
@@ -65,26 +62,30 @@ set_entrez_key(entrez_key)
 .fetch_biosample_metadata = function(uid)
 {
   #Dado un uid de bioproject, devolver un df de metadata de biosample
-  result=entrez_link(dbfrom="bioproject",id=uid,db="biosample",cmd = "neighbor_history")
-  web_histories=result$web_histories
+  result=entrez_link(dbfrom="bioproject",
+                     id=uid,
+                     db="biosample",
+                     cmd = "neighbor_history")
+  Sys.sleep(0.1)  
+  web_history=result$web_histories$bioproject_biosample_all
+
+  biosample_xml=entrez_fetch(db="biosample",
+               web_history = web_history,
+               rettype = "xml")
+  Sys.sleep(0.1)
   
-  for (history in web_histories)
-  {
-    entrez_result=entrez_fetch(db="biosample",
-                 web_history = history,
-                 rettype = "xml")
-    
-    #TODO: Hacer un concat de estos resultados
-    print(entrez_result)
-  }
-  
+  metadata_xml=read_xml(biosample_xml)
+
+  metadata_list=as_list(metadata_xml)
+
+  biosamples=metadata_list$BioSampleSet
+  meta_df=map_dfr(biosamples,.extract_fields)
+
+  return(meta_df)
+
+
 }
 
-
-
-
-#Dada una lista de accessions de bioproject, devolver una lista de dataframes 
-#Con metadata de biosamples de ese accession
 get_biosample_metadata=function(bioproject_accessions)
 {
   #####VALIDATION
@@ -117,13 +118,12 @@ get_biosample_metadata=function(bioproject_accessions)
     return(NULL)
   }
   
-  #IDEA: Hacer un dataframe para cada Accession. Sería una lista de dataframes.
   ret_list=list()
   
   for (id in valid_ids)
   {
     local_uid=bioproject_uid[[id]][1]
-    
+    message("Processing ID: ",paste(id))
     ret_list[[id]]=.fetch_biosample_metadata(local_uid)
   }
   return(ret_list)
