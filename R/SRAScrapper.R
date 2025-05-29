@@ -24,62 +24,74 @@ library(xml2)
 
 .extract_fields_SRA= function (experiment_package)
 {
+   
   EXPERIMENT=experiment_package$EXPERIMENT
   SUBMISSION=experiment_package$SUBMISSION
-  Organization=experiment_package$Organization
+  ORGANIZATION=experiment_package$Organization
   STUDY=experiment_package$STUDY
   SAMPLE=experiment_package$SAMPLE
   Pool=experiment_package$Pool
   RUN_SET=experiment_package$RUN_SET
   
   
-  
-  all_info <- list(
-    experiment_title=
-
-    # # Experiment info
-    # experiment_accession = attr(EXPERIMENT, "accession"),
-    # experiment_title = EXPERIMENT$TITLE[[1]],
-    # experiment_design = EXPERIMENT$DESIGN$DESIGN_DESCRIPTION[[1]],
-    # library_name = EXPERIMENT$DESIGN$LIBRARY_DESCRIPTOR$LIBRARY_NAME[[1]],
-    # library_strategy = EXPERIMENT$DESIGN$LIBRARY_DESCRIPTOR$LIBRARY_STRATEGY[[1]],
-    # library_source = EXPERIMENT$DESIGN$LIBRARY_DESCRIPTOR$LIBRARY_SOURCE[[1]],
-    # library_selection = EXPERIMENT$DESIGN$LIBRARY_DESCRIPTOR$LIBRARY_SELECTION[[1]],
-    # platform = EXPERIMENT$PLATFORM$ILLUMINA$INSTRUMENT_MODEL[[1]],
-    # 
-    # # Study info
-    # study_accession = STUDY$IDENTIFIERS$PRIMARY_ID[[1]],
-    # bioproject_accession = STUDY$IDENTIFIERS$EXTERNAL_ID[[1]],
-    # study_title = STUDY$DESCRIPTOR$STUDY_TITLE[[1]],
-    # study_abstract = STUDY$DESCRIPTOR$STUDY_ABSTRACT[[1]],
-    # 
-    # # Sample info
-    # sample_accession = SAMPLE$IDENTIFIERS$PRIMARY_ID[[1]],
-    # biosample_accession = SAMPLE$IDENTIFIERS$EXTERNAL_ID[[1]],
-    # sample_title = SAMPLE$DESCRIPTION[[1]],
-    # organism = SAMPLE$SAMPLE_NAME$SCIENTIFIC_NAME[[1]],
-    # tax_id = SAMPLE$SAMPLE_NAME$TAXON_ID[[1]],
-    # 
-    # # Run info
-    # run_accession = RUN_SET$RUN$IDENTIFIERS$PRIMARY_ID[[1]],
-    # total_spots = RUN_SET$RUN$Statistics$nspots,
-    # total_bases = RUN_SET$RUN$Statistics$nreads,
-    # run_size = attr(RUN_SET$RUN, "size"),
-    # run_url = RUN_SET$RUN$SRAFiles$SRAFile[[3]]$url,
-    # 
-    # # Submission info
-    # submission_center = attr(SUBMISSION, "center_name"),
-    # submission_lab = attr(SUBMISSION, "lab_name"),
-    # 
-    # # Organization info
-    # organization_name = Organization$Name[[1]],
-    # organization_department = Organization$Address$Department[[1]],
-    # organization_address = paste(Organization$Address$Street[[1]], 
-    #                              Organization$Address$City[[1]], 
-    #                              Organization$Address$Country[[1]]),
-    # contact_name = paste(Organization$Contact$Name$First[[1]], 
-    #                      Organization$Contact$Name$Last[[1]]),
-    # contact_email = attr(Organization$Contact, "email")
+  #TODO: errorproof this code
+  all_info <- tibble(
+    
+    #Experiment,12 columns
+    accession          = attr(EXPERIMENT, "accession"),
+    alias              = attr(EXPERIMENT, "alias"),
+    experiment_id      = EXPERIMENT$IDENTIFIERS$PRIMARY_ID[[1]],
+    title              = EXPERIMENT$TITLE[[1]],
+    study_id           = EXPERIMENT$STUDY_REF$IDENTIFIERS$PRIMARY_ID[[1]],
+    sample_id          = EXPERIMENT$DESIGN$SAMPLE_DESCRIPTOR$IDENTIFIERS$PRIMARY_ID[[1]],
+    design_description = EXPERIMENT$DESIGN$DESIGN_DESCRIPTION[[1]],
+    library_name       = EXPERIMENT$DESIGN$LIBRARY_DESCRIPTOR$LIBRARY_NAME[[1]],
+    library_strategy   = EXPERIMENT$DESIGN$LIBRARY_DESCRIPTOR$LIBRARY_STRATEGY[[1]],
+    library_source     = EXPERIMENT$DESIGN$LIBRARY_DESCRIPTOR$LIBRARY_SOURCE[[1]],
+    library_selection  = EXPERIMENT$DESIGN$LIBRARY_DESCRIPTOR$LIBRARY_SELECTION[[1]],
+    instrument_model   = EXPERIMENT$PLATFORM$ILLUMINA$INSTRUMENT_MODEL[[1]],
+    
+    #Submission, 7 columns
+    submission_accession = attr(SUBMISSION, "accession"),
+    submission_alias     = attr(SUBMISSION, "alias"),
+    submission_lab_name  = attr(SUBMISSION, "lab_name"),
+    submission_center    = attr(SUBMISSION, "center_name"),
+    submission_id        = SUBMISSION$IDENTIFIERS$PRIMARY_ID[[1]],
+    submitter_id         = SUBMISSION$IDENTIFIERS$SUBMITTER_ID[[1]],
+    submitter_namespace  = attr(SUBMISSION$IDENTIFIERS$SUBMITTER_ID, "namespace"),
+    
+    #Organization, 11 columns
+    org_type             = attr(ORGANIZATION, "type"),
+    org_name             = ORGANIZATION$Name[[1]],
+    org_department       = ORGANIZATION$Address$Department[[1]],
+    org_institution      = ORGANIZATION$Address$Institution[[1]],
+    org_street           = ORGANIZATION$Address$Street[[1]],
+    org_city             = ORGANIZATION$Address$City[[1]],
+    org_country          = ORGANIZATION$Address$Country[[1]],
+    org_postal_code      = attr(ORGANIZATION$Address, "postal_code"),
+    contact_first_name   = ORGANIZATION$Contact$Name$First[[1]],
+    contact_last_name    = ORGANIZATION$Contact$Name$Last[[1]],
+    contact_email        = attr(ORGANIZATION$Contact, "email"),
+    
+    #Study, 10 columns
+    study_center_name          = attr(STUDY, "center_name"),
+    study_alias                = attr(STUDY, "alias"),
+    study_accession            = attr(STUDY, "accession"),
+    study_primary_id           = STUDY$IDENTIFIERS$PRIMARY_ID[[1]],
+    study_external_id          = STUDY$IDENTIFIERS$EXTERNAL_ID[[1]],
+    study_external_namespace   = attr(STUDY$IDENTIFIERS$EXTERNAL_ID, "namespace"),
+    study_external_label       = attr(STUDY$IDENTIFIERS$EXTERNAL_ID, "label"),
+    study_title                = STUDY$DESCRIPTOR$STUDY_TITLE[[1]],
+    study_type                 = attr(STUDY$DESCRIPTOR$STUDY_TYPE, "existing_study_type"),
+    study_abstract             = STUDY$DESCRIPTOR$STUDY_ABSTRACT[[1]],
+    
+    #Pool
+    related_biosample_id=Pool$Member$IDENTIFIERS$EXTERNAL_ID[[1]],
+    
+    #RUN
+    SRR_accession=attr(RUN_SET$RUN,"accession")
+    
+    
   )
 
   return(all_info)
@@ -104,8 +116,7 @@ library(xml2)
 
   SRAs=metadata_list$EXPERIMENT_PACKAGE_SET
   
-  return(SRAs)
-  meta_df=map_dfr(SRAs,.extract_fields)
+  meta_df=map_dfr(SRAs,.extract_fields_SRA)
 
   return(meta_df)
 
@@ -137,7 +148,7 @@ get_SRA_metadata=function(bioproject_accessions)
   message("Proceeding with valid BioProject IDs: ", paste(valid_ids, collapse = ", "))
   
   
-  #bioproject_uid=.fetch_bioproject_uid_from_accession(valid_ids)
+  bioproject_uid=.fetch_bioproject_uid_from_accession(valid_ids)
   
   if (length(bioproject_uid) == 0){#TODO: Chequear esto mejor, mandar un warning mejor.
     warning("NCBI BioProject found zero hits for the specified query")
