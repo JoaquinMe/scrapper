@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 here::i_am("main.R")
-
+rm(list=ls())
 library(tidyverse)
 library(rentrez)
 library(xml2)
@@ -29,8 +29,10 @@ set_entrez_key(entrez_key)
 
 #Procesar
 
-
-accessions_test=c(accessions$id)[1]
+#TODO: arreglar los errores que dan con estos ids
+accessions_test=accessions%>%
+  filter(!id %in% c("PRJNA627456", "PRJNA388250","PRJNA242868")) %>% 
+  pull(id)
 
 biosample_ldf=get_biosample_metadata(accessions_test)
 SRA_ldf=get_SRA_metadata(accessions_test)
@@ -48,7 +50,6 @@ for (name in names(biosample_ldf))
   df_SRA=SRA_ldf[[name]]
   write_tsv(df_biosample,file = biosample_metadata_file_path)
   write_tsv(df_SRA,file = sra_metadata_file_path)
-  
 }
 
 

@@ -2,6 +2,11 @@ library(tidyverse)
 library(rentrez)
 library(xml2)
 
+#TODO: Si hay un error en un PRJNA, devolver la lista de dfs sin ese PRJNA y notificar.
+#No explotar
+#TODO: Migrar todo a un solo scrapper. O BiosampleScrapper o SRAScrapper
+
+
 .fetch_bioproject_uid_from_accession <- function(ids) 
 {
   results <- list()
@@ -31,6 +36,7 @@ library(xml2)
   organism=tryCatch(desc$Organism[[1]],error=function(e) NA_character_)
   atributos=sample$Attributes
   
+
   attr_values=list()
   for (atri in atributos)
   {
